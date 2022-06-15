@@ -13,5 +13,6 @@ namespace TrelloScriptServer.API.Trello
         public string? url { get; set; }
         public DateTime? due { get; set; }
         public bool? dueComplete { get; set; }
+        public List<TrelloMember> members { get; set; }
     }
 }

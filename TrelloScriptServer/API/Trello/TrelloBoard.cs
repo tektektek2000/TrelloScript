@@ -11,5 +11,6 @@ namespace TrelloScriptServer.API.Trello
         public string desc { get; set; }
 
         public List<TrelloList> lists { get; set; }
+        public List<TrelloMember> members { get; set; }
     }
 }

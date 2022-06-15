@@ -202,7 +202,21 @@ namespace TrelloScriptServer.Interpreter
                         message += "*Expired cards:*";
                         foreach (var card in expiredCards)
                         {
-                            message += "\n_" + card.name + "_\n   • URL: " + card.url + "\n   • Due date: " + card.due.Value.Year + (card.due.Value.Month < 10 ? "/0" : "/")
+                            message += "\n_" + card.name
+                                + "_\n   • URL: " + card.url;
+                            if (card.members.Count >= 1)
+                            {
+                                message += "\n   • Members: " + card.members[0].userName;
+                                if (card.members.Count > 1)
+                                {
+                                    for(int i = 1; i < card.members.Count; i++)
+                                    {
+                                        message += ", " + card.members[i].userName;
+                                    }
+                                }
+                            }
+                            message += "\n   • Due date: "
+                                + card.due.Value.Year + (card.due.Value.Month < 10 ? "/0" : "/")
                                 + card.due.Value.Month + (card.due.Value.Day < 10 ? "/0" : "/")
                                 + card.due.Value.Day + (card.due.Value.Hour < 10 ? " 0" : " ")
                                 + card.due.Value.Hour + (card.due.Value.Minute < 10 ? ":0" : ":")
@@ -215,7 +229,21 @@ namespace TrelloScriptServer.Interpreter
                         message += "\n*Soon to be expired cards (Expires in less than 48 hours):*";
                         foreach (var card in soonToBeExpiredCards)
                         {
-                            message += "\n_" + card.name + "_\n   • URL: " + card.url + "\n   • Due date: " + card.due.Value.Year + (card.due.Value.Month < 10 ? "/0" : "/")
+                            message += "\n_" + card.name
+                                + "_\n   • URL: " + card.url;
+                            if (card.members.Count >= 1)
+                            {
+                                message += "\n   • Members: " + card.members[0].userName;
+                                if (card.members.Count > 1)
+                                {
+                                    for (int i = 1; i < card.members.Count; i++)
+                                    {
+                                        message += ", " + card.members[i].userName;
+                                    }
+                                }
+                            }
+                            message += "\n   • Due date: "
+                                + card.due.Value.Year + (card.due.Value.Month < 10 ? "/0" : "/")
                                 + card.due.Value.Month + (card.due.Value.Day < 10 ? "/0" : "/")
                                 + card.due.Value.Day + (card.due.Value.Hour < 10 ? " 0" : " ")
                                 + card.due.Value.Hour + (card.due.Value.Minute < 10 ? ":0" : ":")
