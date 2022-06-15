@@ -1,0 +1,15 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Text;
+
+namespace TrelloScriptServer.API.Trello
+{
+    class TrelloBoard
+    {
+        public string id { get; set; }
+        public string name { get; set; }
+        public string desc { get; set; }
+
+        public List<TrelloList> lists { get; set; }
+    }
+}
