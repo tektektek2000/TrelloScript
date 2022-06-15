@@ -74,10 +74,10 @@ namespace TrelloScriptServer.Interpreter
             {
                 if (parameters != null && parameters.Length == 2)
                 {
-                    int Value = Int16.Parse(parameters[1]);
                     if (parameters[0] == "sleepTime")
                     {
-                        if (Value > 0)
+                        int Value = Int16.Parse(parameters[1]);
+                        if (Value >= 0)
                         {
                             interpreter.setSleep(Value);
                             return CommandResult.Success("Success");
@@ -89,7 +89,8 @@ namespace TrelloScriptServer.Interpreter
                     }
                     else if (parameters[0] == "listenVerbosity")
                     {
-                        if (Value > 0)
+                        int Value = Int16.Parse(parameters[1]);
+                        if (Value >= 0)
                         {
                             verbosity = Value;
                             return CommandResult.Success("Success");
@@ -99,18 +100,44 @@ namespace TrelloScriptServer.Interpreter
                             return CommandResult.Failure("Invalid value: Must be positive or zero");
                         }
                     }
+                    else if (parameters[0] == "slackUpdateInterval" && parameters.Length == 2)
+                    {
+                        var Values = parameters[1].Split(",");
+                        if (Values.Length == 3)
+                        {
+                            List<int> ints = new List<int>();
+                            foreach (var v in Values)
+                            {
+                                int Value = Int16.Parse(v);
+                                if (Value >= 0)
+                                {
+                                    ints.Add(Value);
+                                }
+                                else
+                                {
+                                    return CommandResult.Failure("Invalid value: Must be positive or zero");
+                                }
+                            }
+                            interpreter.setSlackUpdateInterval(new TimeSpan(ints[0], ints[1], ints[2]));
+                            return CommandResult.Success("Success");
+                        }
+                        else
+                        {
+                            return CommandResult.Failure("Invalid value: Format must be Hours,Minutes,Seconds");
+                        }
+                    }
                     else
                     {
                         return CommandResult.Failure("Invalid command"
                         + "\nUsage: set [Name] [Value]"
-                        + "\nPossible [Name] values: sleepTime, listenVerbosity");
+                        + "\nPossible [Name] values: sleepTime, listenVerbosity, slackUpdateInterval");
                     }
                 }
                 else
                 {
                     return CommandResult.Failure("Invalid command"
                     + "\nUsage: set [Name] [Value]"
-                    + "\nPossible [Name] values: sleepTime, listenVerbosity");
+                    + "\nPossible [Name] values: sleepTime, listenVerbosity, slackUpdateInterval");
                 }
             }
             else if (command == "get")
@@ -129,41 +156,58 @@ namespace TrelloScriptServer.Interpreter
                         ret.Body = verbosity.ToString();
                         return ret;
                     }
+                    else if (parameters[0] == "slackUpdateInterval")
+                    {
+                        var ret = CommandResult.Success("Success");
+                        var time = interpreter.getSlackUpdateInterval();
+                        ret.Body = time.Days * 24 + time.Hours + "," + time.Minutes + "," + time.Seconds;
+                        return ret;
+                    }
                     else
                     {
                         return CommandResult.Failure("Invalid command"
                         + "\nUsage: get [Name]"
-                        + "\nPossible [Name] values: sleepTime, listenVerbosity");
+                        + "\nPossible [Name] values: sleepTime, listenVerbosity, slackUpdateInterval");
                     }
                 }
                 else
                 {
                     return CommandResult.Failure("Invalid command"
                     + "\nUsage: get [Name]"
-                    + "\nPossible [Name] values: sleepTime, listenVerbosity");
+                    + "\nPossible [Name] values: sleepTime, listenVerbosity, slackUpdateInterval");
                 }
             }
             else if (command == "slack")
             {
                 if (parameters != null && parameters.Length > 0)
                 {
-                    if (parameters[0] == "message" && parameters.Length == 2)
+                    if (parameters[0] == "message" && parameters.Length >= 2)
                     {
-                        SlackBot.Message(parameters[1]);
+                        string msg = parameters[1];
+                        for (int i = 2; i < parameters.Length; i++)
+                        {
+                            msg += " " + parameters[i];
+                        }
+                        SlackBot.Message(msg);
+                        return CommandResult.Success("Success");
+                    }
+                    else if (parameters[0] == "expiredCards" && parameters.Length == 1)
+                    {
+                        interpreter.UpdateSlackBot();
                         return CommandResult.Success("Success");
                     }
                     else
                     {
                         return CommandResult.Failure("Invalid command"
-                            + "\nUsage: slack [Command] [Value]"
-                            + "\nPossible [Command] values: message");
+                            + "\nUsage: slack [Command] [Param]"
+                            + "\nPossible [Command] values: message, expiredCards");
                     }
                 }
                 else
                 {
                     return CommandResult.Failure("Invalid command"
-                        + "\nUsage: slack [Command] [Value]"
-                        + "\nPossible [Command] values: message");
+                        + "\nUsage: slack [Command] [Param]"
+                        + "\nPossible [Command] values: message, expiredCards");
                 }
             }
             else if (command == "listen")
@@ -186,6 +230,7 @@ namespace TrelloScriptServer.Interpreter
                 + "\nstatus -> Tells you if the interpreter is running"
                 + "\nset [Name] [Value] -> Sets the named variable to the given value"
                 + "\nget [Name] -> Gets the named variable"
+                + "\nslack [Command] [Param] -> Runs commands on the slack bot."
                 + "\nlisten -> Starts a listening session, where the background update session, prints debug information";
                 return res;
             }

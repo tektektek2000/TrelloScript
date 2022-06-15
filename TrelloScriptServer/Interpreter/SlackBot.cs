@@ -47,7 +47,7 @@ namespace TrelloScriptServer.Interpreter
 
         public async Task WriteMessage(string message)
         {
-            var postObject = new { channel = _channel, text = message };
+            var postObject = new { channel = _channel, text = message, mrkdwn = true };
             var json = JsonConvert.SerializeObject(postObject);
             var content = new StringContent(json, Encoding.UTF8, "application/json");
 

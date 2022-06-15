@@ -137,6 +137,12 @@ namespace TrelloScriptServer.API.Trello
                     newCard.name = details[i]["name"].ToString();
                     newCard.desc = details[i]["desc"].ToString();
                     newCard.parentList = list;
+                    newCard.url = "https://trello.com/c/" + newCard.id;
+                    if (details[i]["due"] != null && details[i]["due"].ToString() != "")
+                    {
+                        newCard.due = details[i]["due"].ToObject<DateTime>();
+                        newCard.dueComplete = details[i]["dueComplete"].ToObject<bool>();
+                    }
                     //Console.WriteLine("Board[" + i + "]: id=" + newCard.id + " name=" + newCard.name + " desc=" + newCard.desc);
                     ret.Add(newCard);
                 }
