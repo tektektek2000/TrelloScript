@@ -12,11 +12,13 @@ namespace TrelloScriptServer.Interpreter
 
         //Instance
         static ScriptRunnerProgram instance;
+        static SlackBot bot;
 
         private ScriptRunnerProgram()
         {
             Logger.setPrintToCout(false);
             api = new TrelloAPI("Config/TrelloAPIConfig.json");
+            SlackBot.Init("Config/SlackBotConfig.json", "C03KA5KDEFR");// "#testing_bot");
             interpreter = new TrelloInterpreter(api);
             interpreter.StartUpdateThread();
             Console.WriteLine("Interpreter " + appVersion);
@@ -139,6 +141,29 @@ namespace TrelloScriptServer.Interpreter
                     return CommandResult.Failure("Invalid command"
                     + "\nUsage: get [Name]"
                     + "\nPossible [Name] values: sleepTime, listenVerbosity");
+                }
+            }
+            else if (command == "slack")
+            {
+                if (parameters != null && parameters.Length > 0)
+                {
+                    if (parameters[0] == "message" && parameters.Length == 2)
+                    {
+                        SlackBot.Message(parameters[1]);
+                        return CommandResult.Success("Success");
+                    }
+                    else
+                    {
+                        return CommandResult.Failure("Invalid command"
+                            + "\nUsage: slack [Command] [Value]"
+                            + "\nPossible [Command] values: message");
+                    }
+                }
+                else
+                {
+                    return CommandResult.Failure("Invalid command"
+                        + "\nUsage: slack [Command] [Value]"
+                        + "\nPossible [Command] values: message");
                 }
             }
             else if (command == "listen")
