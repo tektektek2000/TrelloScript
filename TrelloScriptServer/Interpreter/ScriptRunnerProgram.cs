@@ -8,7 +8,7 @@ namespace TrelloScriptServer.Interpreter
         TrelloAPI api;
         TrelloInterpreter interpreter;
         int verbosity;
-        const string appVersion = "v0.1.2";
+        const string appVersion = "v0.2.0";
 
         //Instance
         static ScriptRunnerProgram instance;
@@ -21,8 +21,7 @@ namespace TrelloScriptServer.Interpreter
             SlackBot.Init("Config/SlackBotConfig.json", "C03KA5KDEFR");// "#testing_bot");
             interpreter = new TrelloInterpreter(api);
             interpreter.StartUpdateThread();
-            Console.WriteLine("Interpreter " + appVersion);
-            Console.WriteLine("Interpreter started: Update cycle is running in the background. Commands enabled");
+            Console.WriteLine("TrelloScriptServer " + appVersion);
             verbosity = 3;
         }
 
