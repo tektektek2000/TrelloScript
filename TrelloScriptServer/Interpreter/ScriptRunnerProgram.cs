@@ -64,6 +64,10 @@ namespace TrelloScriptServer.Interpreter
                 res.Body = interpreter.isRunning ? "Running" : "Not Running";
                 return res;
             }
+            else if (command == "echo")
+            {
+                return CommandResult.Success("Hello");
+            }
             else if (command == "set")
             {
                 if (parameters != null && parameters.Length == 2)
