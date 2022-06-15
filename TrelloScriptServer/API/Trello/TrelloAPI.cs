@@ -21,6 +21,9 @@ namespace TrelloScriptServer.API.Trello
         private string Token = "";
         private string Key = "";
         private HttpClient client;
+        List<TrelloMember> bufferedMembers = new List<TrelloMember>();
+        DateTime updatedMembersLastTime = DateTime.Now; 
+        object membersLock = new object();
 
         public TrelloAPI(string jsonConfigPath)
         {
@@ -61,6 +64,44 @@ namespace TrelloScriptServer.API.Trello
             Logger.WriteLine(s);
         }
 
+        public TrelloMember getMember(string id)
+        {
+            lock (membersLock)
+            {
+                if(DateTime.Now - updatedMembersLastTime > new TimeSpan(0, 20, 0))
+                {
+                    bufferedMembers.Clear();
+                    updatedMembersLastTime = DateTime.Now;
+                }
+                foreach(var it in bufferedMembers)
+                {
+                    if(id == it.id) { return it; }
+                }
+            }
+            var httpRequest = new HttpRequestMessage(HttpMethod.Get, "https://api.trello.com/1/members/" + id + "?" + "key=" + Key + "&token=" + Token);
+            HttpResponseMessage response = client.SendAsync(httpRequest).Result;
+            if (response.IsSuccessStatusCode)
+            {
+                string dataObjects = response.Content.ReadAsStringAsync().Result;
+                var details = JObject.Parse(dataObjects);
+                TrelloMember newMember = new TrelloMember();
+                newMember.id = details["id"].ToString();
+                newMember.userName = details["username"].ToString();
+                newMember.FullName = details["fullName"].ToString();
+                lock (membersLock)
+                { 
+                    bufferedMembers.Add(newMember);
+                }
+                return newMember;
+            }
+            else
+            {
+                Logger.WriteLine(httpRequest.ToString());
+                PrintIncoming(response);
+                throw new FailedRestRequestException();
+            }
+        }
+
         public List<TrelloBoard> getBoards()
         {
             List<TrelloBoard> ret = new List<TrelloBoard>();
@@ -77,9 +118,19 @@ namespace TrelloScriptServer.API.Trello
                     newBoard.id = details[i]["id"].ToString();
                     newBoard.name = details[i]["name"].ToString();
                     newBoard.desc = details[i]["desc"].ToString();
+                    if (details[i]["memberships"] != null && details[i]["memberships"].ToString() != "")
+                    {
+                        newBoard.members = new List<TrelloMember>();
+                        foreach(var it in details[i]["memberships"])
+                        {
+                            var member = getMember(it["idMember"].ToString());
+                            newBoard.members.Add(member);
+                        }
+                    }
                     //Console.WriteLine("Board[" + i + "]: id=" + newBoard.id + " name=" + newBoard.name + " desc=" + newBoard.desc);
                     ret.Add(newBoard);
                 }
+                Thread.Sleep(120);
                 return ret;
             }
             else
@@ -110,6 +161,7 @@ namespace TrelloScriptServer.API.Trello
                     //Console.WriteLine("Board[" + i + "]: id=" + newList.id + " name=" + newList.name + " pos=" + newList.pos);
                     ret.Add(newList);
                 }
+                Thread.Sleep(120);
                 return ret;
             }
             else
@@ -137,9 +189,29 @@ namespace TrelloScriptServer.API.Trello
                     newCard.name = details[i]["name"].ToString();
                     newCard.desc = details[i]["desc"].ToString();
                     newCard.parentList = list;
-                    //Console.WriteLine("Board[" + i + "]: id=" + newCard.id + " name=" + newCard.name + " desc=" + newCard.desc);
+                    newCard.url = "https://trello.com/c/" + newCard.id;
+                    if (details[i]["due"] != null && details[i]["due"].ToString() != "")
+                    {
+                        newCard.due = details[i]["due"].ToObject<DateTime>();
+                        newCard.dueComplete = details[i]["dueComplete"].ToObject<bool>();
+                    }
+                    if (details[i]["idMembers"] != null && details[i]["idMembers"].ToString() != "")
+                    {
+                        newCard.members = new List<TrelloMember>();
+                        foreach (var it in details[i]["idMembers"])
+                        {
+                            foreach (var it2 in list.parentBoard.members)
+                            {
+                                if (it2.id == it.ToString())
+                                {
+                                    newCard.members.Add(it2);
+                                }
+                            }
+                        }
+                    }
                     ret.Add(newCard);
                 }
+                Thread.Sleep(120);
                 return ret;
             }
             else
