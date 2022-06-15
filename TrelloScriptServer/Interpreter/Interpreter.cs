@@ -173,12 +173,12 @@ namespace TrelloScriptServer.Interpreter
             lock (refreshLock)
             {
                 RefreshBoards();
-                List<TrelloCard> expiredCards = new List<TrelloCard>();
-                List<TrelloCard> soonToBeExpiredCards = new List<TrelloCard>();
                 var now = DateTime.Now;
                 var soon = new TimeSpan(48, 0, 0);
                 foreach (var board in slackTargetBoards)
                 {
+                    List<TrelloCard> expiredCards = new List<TrelloCard>();
+                    List<TrelloCard> soonToBeExpiredCards = new List<TrelloCard>();
                     foreach (var list in board.lists)
                     {
                         foreach (var card in list.cards)
@@ -196,26 +196,38 @@ namespace TrelloScriptServer.Interpreter
                             }
                         }
                     }
+                    string message = "*Board - " + board.name + "*\n";
+                    if (expiredCards.Count > 0)
+                    {
+                        message += "*Expired cards:*";
+                        foreach (var card in expiredCards)
+                        {
+                            message += "\n_" + card.name + "_\n   • URL: " + card.url + "\n   • Due date: " + card.due.Value.Year + (card.due.Value.Month < 10 ? "/0" : "/")
+                                + card.due.Value.Month + (card.due.Value.Day < 10 ? "/0" : "/")
+                                + card.due.Value.Day + (card.due.Value.Hour < 10 ? " 0" : " ")
+                                + card.due.Value.Hour + (card.due.Value.Minute < 10 ? ":0" : ":")
+                                + card.due.Value.Minute;
+                        }
+                        message += "\n";
+                    }
+                    if (soonToBeExpiredCards.Count > 0)
+                    {
+                        message += "\n*Soon to be expired cards (Expires in less than 48 hours):*";
+                        foreach (var card in soonToBeExpiredCards)
+                        {
+                            message += "\n_" + card.name + "_\n   • URL: " + card.url + "\n   • Due date: " + card.due.Value.Year + (card.due.Value.Month < 10 ? "/0" : "/")
+                                + card.due.Value.Month + (card.due.Value.Day < 10 ? "/0" : "/")
+                                + card.due.Value.Day + (card.due.Value.Hour < 10 ? " 0" : " ")
+                                + card.due.Value.Hour + (card.due.Value.Minute < 10 ? ":0" : ":")
+                                + card.due.Value.Minute;
+                        }
+                    }
+                    if(expiredCards.Count == 0 && soonToBeExpiredCards.Count == 0)
+                    {
+                        message += "\n*Nothing to show! Good Job!*\n";
+                    }
+                    SlackBot.Message(message);
                 }
-                string message = "*_Expired cards:_*\n";
-                foreach (var card in expiredCards)
-                {
-                    message += "\n*" + card.name + "*\n   • URL: " + card.url + "\n   • Expired date: " + card.due.Value.Year + (card.due.Value.Month < 10 ? "/0" : "/")
-                        + card.due.Value.Month + (card.due.Value.Day < 10 ? "/0" : "/")
-                        + card.due.Value.Day + (card.due.Value.Hour < 10 ? " 0" : " ")
-                        + card.due.Value.Hour + (card.due.Value.Minute < 10 ? ":0" : ":")
-                        + card.due.Value.Minute;
-                }
-                message += "\n\n*_Soon to be expired cards (Expires in less than 48 hours):_*\n";
-                foreach (var card in soonToBeExpiredCards)
-                {
-                    message += "\n*" + card.name + "*\n   • URL: " + card.url + "\n   • Expired date: " + card.due.Value.Year + (card.due.Value.Month < 10 ? "/0" : "/")
-                        + card.due.Value.Month + (card.due.Value.Day < 10 ? "/0" : "/")
-                        + card.due.Value.Day + (card.due.Value.Hour < 10 ? " 0" : " ")
-                        + card.due.Value.Hour + (card.due.Value.Minute < 10 ? ":0" : ":")
-                        + card.due.Value.Minute;
-                }
-                SlackBot.Message(message);
             }
         }
 
