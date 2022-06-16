@@ -4,23 +4,32 @@ using System.Text;
 using TrelloScriptServer.API.Command.Model;
 using TrelloScriptServer.API.Trello;
 
-namespace TrelloScriptServer.Interpreter
+namespace TrelloScriptServer.API.Slack
 {
     public class SlackBot
     {
         private readonly string _url;
         private readonly HttpClient _client;
         private readonly string _channel;
+        public List<Alias> Aliases { get; set; }
 
-        private static SlackBot? _instance = null;
 
-        private SlackBot(string token, string channel)
+        public SlackBot(JToken token)
         {
-            _channel = channel;
+            var sercurityToken = token["token"].ToString();
+            _channel = token["channel"].ToString();
             _url = "https://slack.com/api/chat.postMessage";
             _client = new HttpClient();
             _client.DefaultRequestHeaders.Authorization =
-                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", sercurityToken);
+            Aliases = new List<Alias>();
+            foreach (var it in token["aliases"])
+            {
+                Alias newAlias = new Alias();
+                newAlias.TrelloName = it["trello"].ToString();
+                newAlias.SlackName = it["slack"].ToString();
+                Aliases.Add(newAlias);
+            }
         }
 
         static void PrintIncoming(HttpResponseMessage response)
@@ -35,16 +44,6 @@ namespace TrelloScriptServer.Interpreter
             Logger.WriteLine(s);
         }
 
-        public static void Init(string pathToConfig, string channel)
-        {
-            if (_instance == null)
-            {
-                var config = JObject.Parse(File.ReadAllText(pathToConfig));
-                string SecurityToken = config["token"].ToString();
-                _instance = new SlackBot(SecurityToken,channel);
-            }
-        }
-
         public async Task WriteMessage(string message)
         {
             var postObject = new { channel = _channel, text = message, mrkdwn = true };
@@ -55,7 +54,7 @@ namespace TrelloScriptServer.Interpreter
 
             if (response.IsSuccessStatusCode)
             {
-                
+
             }
             else
             {
@@ -64,12 +63,21 @@ namespace TrelloScriptServer.Interpreter
             }
         }
 
-        public static void Message(string message)
+        public void Message(string message)
         {
-            if (_instance != null)
+            WriteMessage(message);
+        }
+
+        public string getSlackAlias(string trelloName)
+        {
+            foreach(var it in Aliases)
             {
-                _instance.WriteMessage(message);
+                if(it.TrelloName == trelloName)
+                {
+                    return it.SlackName;
+                }
             }
+            return trelloName;
         }
     }
 }

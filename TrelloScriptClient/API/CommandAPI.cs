@@ -21,6 +21,7 @@ namespace TrelloScriptClient.API
     {
         private string Token = "";
         private string Address = "";
+        private string WorkPlace = "";
         private HttpClient client;
 
         public CommandAPI(string jsonConfigPath)
@@ -28,6 +29,7 @@ namespace TrelloScriptClient.API
             var config = JObject.Parse(File.ReadAllText(jsonConfigPath));
             Address = config["address"].ToString();
             Token = config["token"].ToString();
+            WorkPlace = config["workplace"].ToString();
             client = new HttpClient();
             client.DefaultRequestHeaders.Accept.Add(
             new MediaTypeWithQualityHeaderValue("application/json"));
@@ -55,7 +57,7 @@ namespace TrelloScriptClient.API
 
         public CommandResult runCommand(string command, string parameters)
         {
-            var httpRequest = new HttpRequestMessage(HttpMethod.Get, Address + "/api/Command/run/" + command + "?" + "token=" + Token + "&parameters=" + parameters);
+            var httpRequest = new HttpRequestMessage(HttpMethod.Get, Address + "/api/WorkPlace/" + WorkPlace + "/run/" + command + "?" + "token=" + Token + "&parameters=" + parameters);
             HttpResponseMessage response = client.SendAsync(httpRequest).Result;
             if (response.IsSuccessStatusCode)
             {

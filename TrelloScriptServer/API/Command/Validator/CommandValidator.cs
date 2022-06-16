@@ -4,24 +4,16 @@ namespace TrelloScriptServer.API.Command.Validator
 {
     public class CommandValidator
     {
-        private static CommandValidator? Instance = null;
         private string SecurityToken;
 
-        private CommandValidator(string pathToConfig)
+        public CommandValidator(JToken config)
         {
-            var config = JObject.Parse(File.ReadAllText(pathToConfig));
             SecurityToken = config["token"].ToString();
         }
 
-        public static void Init(string pathToConfig)
+        public bool Validate(string token)
         {
-            Instance = new CommandValidator(pathToConfig);
-        }
-
-        public static bool Validate(string token)
-        {
-            if(Instance == null) { return false; }
-            return Instance.SecurityToken == token;
+            return SecurityToken == token;
         }
     }
 }

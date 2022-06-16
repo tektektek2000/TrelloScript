@@ -31,6 +31,6 @@ app.UseAuthorization();
 
 app.MapControllers();
 
-ScriptRunnerProgram.Init();
+WorkPlace.Init("Config/WorkPlaceConfig.json");
 
 app.Run();

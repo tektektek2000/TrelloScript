@@ -4,8 +4,8 @@ using System.Diagnostics;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
+using TrelloScriptServer.API.Slack;
 using TrelloScriptServer.API.Trello;
-using TrelloScriptServer.Interpreter;
 
 namespace TrelloScriptServer.Interpreter
 {
@@ -14,6 +14,7 @@ namespace TrelloScriptServer.Interpreter
         List<TrelloBoard> targetBoards;
         List<TrelloBoard> slackTargetBoards;
         TrelloAPI api;
+        SlackBot slackBot;
         Thread updateThread;
         DateTime lastSlackUpdate = DateTime.MinValue;
         CancellationTokenSource cancellationToken;
@@ -32,9 +33,10 @@ namespace TrelloScriptServer.Interpreter
             }
         }
 
-        public TrelloInterpreter(TrelloAPI API)
+        public TrelloInterpreter(TrelloAPI API, SlackBot slackBot)
         {
             api = API;
+            this.slackBot = slackBot;
             //RefreshBoards();
         }
 
@@ -170,91 +172,94 @@ namespace TrelloScriptServer.Interpreter
 
         public void UpdateSlackBot()
         {
-            lock (refreshLock)
+            if (slackBot != null)
             {
-                RefreshBoards();
-                var now = DateTime.Now;
-                var soon = new TimeSpan(48, 0, 0);
-                foreach (var board in slackTargetBoards)
+                lock (refreshLock)
                 {
-                    List<TrelloCard> expiredCards = new List<TrelloCard>();
-                    List<TrelloCard> soonToBeExpiredCards = new List<TrelloCard>();
-                    foreach (var list in board.lists)
+                    RefreshBoards();
+                    var now = DateTime.Now;
+                    var soon = new TimeSpan(48, 0, 0);
+                    foreach (var board in slackTargetBoards)
                     {
-                        foreach (var card in list.cards)
+                        List<TrelloCard> expiredCards = new List<TrelloCard>();
+                        List<TrelloCard> soonToBeExpiredCards = new List<TrelloCard>();
+                        foreach (var list in board.lists)
                         {
-                            if (card.due.HasValue && card.dueComplete.HasValue && !card.dueComplete.Value)
+                            foreach (var card in list.cards)
                             {
-                                if (card.due.Value - now < TimeSpan.Zero)
+                                if (card.due.HasValue && card.dueComplete.HasValue && !card.dueComplete.Value)
                                 {
-                                    expiredCards.Add(card);
-                                }
-                                else if (card.due.Value - now < soon)
-                                {
-                                    soonToBeExpiredCards.Add(card);
-                                }
-                            }
-                        }
-                    }
-                    string message = "*Board - " + board.name + "*\n";
-                    if (expiredCards.Count > 0)
-                    {
-                        message += "*Expired cards:*";
-                        foreach (var card in expiredCards)
-                        {
-                            message += "\n_" + card.name
-                                + "_\n   • URL: " + card.url;
-                            if (card.members.Count >= 1)
-                            {
-                                message += "\n   • Members: " + card.members[0].userName;
-                                if (card.members.Count > 1)
-                                {
-                                    for(int i = 1; i < card.members.Count; i++)
+                                    if (card.due.Value - now < TimeSpan.Zero)
                                     {
-                                        message += ", " + card.members[i].userName;
+                                        expiredCards.Add(card);
+                                    }
+                                    else if (card.due.Value - now < soon)
+                                    {
+                                        soonToBeExpiredCards.Add(card);
                                     }
                                 }
                             }
-                            message += "\n   • Due date: "
-                                + card.due.Value.Year + (card.due.Value.Month < 10 ? "/0" : "/")
-                                + card.due.Value.Month + (card.due.Value.Day < 10 ? "/0" : "/")
-                                + card.due.Value.Day + (card.due.Value.Hour < 10 ? " 0" : " ")
-                                + card.due.Value.Hour + (card.due.Value.Minute < 10 ? ":0" : ":")
-                                + card.due.Value.Minute;
                         }
-                        message += "\n";
-                    }
-                    if (soonToBeExpiredCards.Count > 0)
-                    {
-                        message += "\n*Soon to be expired cards (Expires in less than 48 hours):*";
-                        foreach (var card in soonToBeExpiredCards)
+                        string message = "*Board - " + board.name + "*\n";
+                        if (expiredCards.Count > 0)
                         {
-                            message += "\n_" + card.name
-                                + "_\n   • URL: " + card.url;
-                            if (card.members.Count >= 1)
+                            message += "*Expired cards:*";
+                            foreach (var card in expiredCards)
                             {
-                                message += "\n   • Members: " + card.members[0].userName;
-                                if (card.members.Count > 1)
+                                message += "\n_" + card.name
+                                    + "_\n   • URL: " + card.url;
+                                if (card.members.Count >= 1)
                                 {
-                                    for (int i = 1; i < card.members.Count; i++)
+                                    message += "\n   • Members: " + slackBot.getSlackAlias(card.members[0].userName);
+                                    if (card.members.Count > 1)
                                     {
-                                        message += ", " + card.members[i].userName;
+                                        for (int i = 1; i < card.members.Count; i++)
+                                        {
+                                            message += ", " + slackBot.getSlackAlias(card.members[i].userName);
+                                        }
                                     }
                                 }
+                                message += "\n   • Due date: "
+                                    + card.due.Value.Year + (card.due.Value.Month < 10 ? "/0" : "/")
+                                    + card.due.Value.Month + (card.due.Value.Day < 10 ? "/0" : "/")
+                                    + card.due.Value.Day + (card.due.Value.Hour < 10 ? " 0" : " ")
+                                    + card.due.Value.Hour + (card.due.Value.Minute < 10 ? ":0" : ":")
+                                    + card.due.Value.Minute;
                             }
-                            message += "\n   • Due date: "
-                                + card.due.Value.Year + (card.due.Value.Month < 10 ? "/0" : "/")
-                                + card.due.Value.Month + (card.due.Value.Day < 10 ? "/0" : "/")
-                                + card.due.Value.Day + (card.due.Value.Hour < 10 ? " 0" : " ")
-                                + card.due.Value.Hour + (card.due.Value.Minute < 10 ? ":0" : ":")
-                                + card.due.Value.Minute;
+                            message += "\n";
                         }
+                        if (soonToBeExpiredCards.Count > 0)
+                        {
+                            message += "\n*Soon to be expired cards (Expires in less than 48 hours):*";
+                            foreach (var card in soonToBeExpiredCards)
+                            {
+                                message += "\n_" + card.name
+                                    + "_\n   • URL: " + card.url;
+                                if (card.members.Count >= 1)
+                                {
+                                    message += "\n   • Members: " + slackBot.getSlackAlias(card.members[0].userName);
+                                    if (card.members.Count > 1)
+                                    {
+                                        for (int i = 1; i < card.members.Count; i++)
+                                        {
+                                            message += ", " + slackBot.getSlackAlias(card.members[i].userName);
+                                        }
+                                    }
+                                }
+                                message += "\n   • Due date: "
+                                    + card.due.Value.Year + (card.due.Value.Month < 10 ? "/0" : "/")
+                                    + card.due.Value.Month + (card.due.Value.Day < 10 ? "/0" : "/")
+                                    + card.due.Value.Day + (card.due.Value.Hour < 10 ? " 0" : " ")
+                                    + card.due.Value.Hour + (card.due.Value.Minute < 10 ? ":0" : ":")
+                                    + card.due.Value.Minute;
+                            }
+                        }
+                        if (expiredCards.Count == 0 && soonToBeExpiredCards.Count == 0)
+                        {
+                            message += "\n*Nothing to show! Good Job!*\n";
+                        }
+                        slackBot.Message(message);
                     }
-                    if(expiredCards.Count == 0 && soonToBeExpiredCards.Count == 0)
-                    {
-                        message += "\n*Nothing to show! Good Job!*\n";
-                    }
-                    SlackBot.Message(message);
                 }
             }
         }

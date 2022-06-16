@@ -1,39 +1,40 @@
-﻿using TrelloScriptServer.API.Command.Model;
+﻿using Newtonsoft.Json.Linq;
+using TrelloScriptServer.API.Command.Model;
+using TrelloScriptServer.API.Command.Validator;
+using TrelloScriptServer.API.Slack;
 using TrelloScriptServer.API.Trello;
 
 namespace TrelloScriptServer.Interpreter
 {
-    public class ScriptRunnerProgram
+    public class WorkPlace
     {
-        TrelloAPI api;
+        string name;
+        TrelloAPI trelloAPI;
         TrelloInterpreter interpreter;
+        SlackBot slackBot;
+        CommandValidator validator;
         int verbosity;
-        const string appVersion = "v0.2.0";
+
+        public string Name { get { return name; } }
 
         //Instance
-        static ScriptRunnerProgram instance;
-        static SlackBot bot;
+        static string appVersion = "v0.2.0";
+        static List<WorkPlace> instances = new List<WorkPlace>();
 
-        private ScriptRunnerProgram()
+        public static CommandResult RunCommand(string workPlaceName, string token, string line)
         {
-            Logger.setPrintToCout(false);
-            api = new TrelloAPI("Config/TrelloAPIConfig.json");
-            SlackBot.Init("Config/SlackBotConfig.json", "C03KA5KDEFR");// "#testing_bot");
-            interpreter = new TrelloInterpreter(api);
-            interpreter.StartUpdateThread();
-            Console.WriteLine("TrelloScriptServer " + appVersion);
-            verbosity = 3;
-        }
-
-        public static void Init()
-        {
-            instance = new ScriptRunnerProgram();
-        }
-
-        public static CommandResult RunCommand(string line)
-        { 
-            if(instance == null) { instance = new ScriptRunnerProgram(); }
-            return instance._RunCommand(line);
+            foreach(WorkPlace workPlace in instances)
+            {
+                if(workPlace.Name == workPlaceName)
+                {
+                    if (workPlace.validator.Validate(token))
+                    {
+                        return workPlace._RunCommand(line);
+                    }
+                    return CommandResult.Failure("Invalid token");
+                }
+            }
+            return CommandResult.Failure("No workplace with this name");
         }
 
         private CommandResult _RunCommand(string line)
@@ -187,7 +188,7 @@ namespace TrelloScriptServer.Interpreter
                         {
                             msg += " " + parameters[i];
                         }
-                        SlackBot.Message(msg);
+                        slackBot.Message(msg);
                         return CommandResult.Success("Success");
                     }
                     else if (parameters[0] == "expiredCards" && parameters.Length == 1)
@@ -236,6 +237,46 @@ namespace TrelloScriptServer.Interpreter
             else
             {
                 return CommandResult.Failure("Invalid command");
+            }
+        }
+
+        public static void Init(string jsonConfigPath)
+        {
+            Logger.setPrintToCout(false);
+            Console.WriteLine("TrelloScriptServer " + appVersion);
+            var config = JArray.Parse(File.ReadAllText(jsonConfigPath));
+            foreach(var it in config)
+            {
+                WorkPlace newWorkPlace = new WorkPlace();
+                newWorkPlace.name = it["name"].ToString();
+                TrelloAPI? trelloApi = null;
+                SlackBot? slackBot = null;
+                CommandValidator? validator = null;
+                foreach(var it2 in it["services"])
+                {
+                    if(it2["type"].ToString() == "trello")
+                    {
+                        trelloApi = new TrelloAPI(it2);
+                    }
+                    else if (it2["type"].ToString() == "slack")
+                    {
+                        slackBot = new SlackBot(it2);
+                    }
+                    else if (it2["type"].ToString() == "command")
+                    {
+                        validator = new CommandValidator(it2);
+                    }
+                }
+                newWorkPlace.trelloAPI = trelloApi;
+                if(trelloApi != null) { newWorkPlace.interpreter = new TrelloInterpreter(trelloApi, slackBot); }
+                newWorkPlace.slackBot = slackBot;
+                newWorkPlace.validator = validator;
+                newWorkPlace.verbosity = 3;
+                if (newWorkPlace.interpreter != null)
+                {
+                    newWorkPlace.interpreter.StartUpdateThread();
+                }
+                instances.Add(newWorkPlace);
             }
         }
     }

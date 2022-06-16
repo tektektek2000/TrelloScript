@@ -25,20 +25,10 @@ namespace TrelloScriptServer.API.Trello
         DateTime updatedMembersLastTime = DateTime.Now; 
         object membersLock = new object();
 
-        public TrelloAPI(string jsonConfigPath)
+        public TrelloAPI(JToken token)
         {
-            var config = JObject.Parse(File.ReadAllText(jsonConfigPath));
-            Key = config["key"].ToString();
-            Token = config["token"].ToString();
-            client = new HttpClient();
-            client.DefaultRequestHeaders.Accept.Add(
-            new MediaTypeWithQualityHeaderValue("application/json"));
-        }
-
-        public TrelloAPI(string key, string token)
-        {
-            Key = key;
-            Token = token;
+            Key = token["key"].ToString();
+            Token = token["token"].ToString();
             client = new HttpClient();
             client.DefaultRequestHeaders.Accept.Add(
             new MediaTypeWithQualityHeaderValue("application/json"));
