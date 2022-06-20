@@ -1,8 +1,7 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using TrelloScriptServer.API.Command.Model;
-using TrelloScriptServer.API.Command.Validator;
-using TrelloScriptServer.Interpreter;
+using TrelloScriptServer.Services.Command;
+using TrelloScriptServer.Services.WorkPlace;
 
 namespace TrelloScriptServer.API.Command.Controllers
 {
@@ -20,9 +19,12 @@ namespace TrelloScriptServer.API.Command.Controllers
         [HttpGet("{workPlaceName}/run/{command}", Name = "RunCommand")]
         public CommandResult Get(string workPlaceName, string command, string? token, string? parameters)
         {
-            string fullcommand = command;
-            if(parameters != null) { fullcommand = command + " " + parameters; }
-            return WorkPlace.RunCommand(workPlaceName, token, fullcommand);
+            string[] split = null;
+            if (parameters != null)
+            {
+                split = parameters.Split(' ');
+            }
+            return WorkPlaceService.RunCommand(workPlaceName, token, command, split);
         }
     }
 }

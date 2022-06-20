@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.HttpOverrides;
-using TrelloScriptServer.API.Command.Validator;
-using TrelloScriptServer.Interpreter;
+using TrelloScriptServer.Services.WorkPlace;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -31,6 +30,6 @@ app.UseAuthorization();
 
 app.MapControllers();
 
-WorkPlace.Init("Config/WorkPlaceConfig.json");
+WorkPlaceService.InitWorkPlaces("Config/WorkPlaceConfig.json");
 
 app.Run();

@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace TrelloScriptServer.Interpreter
+namespace TrelloScriptServer.Services.Trello
 {
     struct TimeInterval
     {

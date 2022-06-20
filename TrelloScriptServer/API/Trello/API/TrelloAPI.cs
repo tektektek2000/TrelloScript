@@ -7,8 +7,10 @@ using System.Xml.Linq;
 using System.Net.Http.Json;
 using Newtonsoft.Json.Linq;
 using System.IO;
+using TrelloScriptServer.API.Trello.Model;
+using TrelloScriptServer.API.Trello.Config;
 
-namespace TrelloScriptServer.API.Trello
+namespace TrelloScriptServer.API.Trello.API
 {
 
     class FailedRestRequestException : Exception
@@ -18,17 +20,15 @@ namespace TrelloScriptServer.API.Trello
 
     class TrelloAPI
     {
-        private string Token = "";
-        private string Key = "";
+        private TrelloAPIConfig config;
         private HttpClient client;
         List<TrelloMember> bufferedMembers = new List<TrelloMember>();
-        DateTime updatedMembersLastTime = DateTime.Now; 
+        DateTime updatedMembersLastTime = DateTime.Now;
         object membersLock = new object();
 
-        public TrelloAPI(JToken token)
+        public TrelloAPI(TrelloAPIConfig Config)
         {
-            Key = token["key"].ToString();
-            Token = token["token"].ToString();
+            config = Config;
             client = new HttpClient();
             client.DefaultRequestHeaders.Accept.Add(
             new MediaTypeWithQualityHeaderValue("application/json"));
@@ -58,17 +58,17 @@ namespace TrelloScriptServer.API.Trello
         {
             lock (membersLock)
             {
-                if(DateTime.Now - updatedMembersLastTime > new TimeSpan(0, 20, 0))
+                if (DateTime.Now - updatedMembersLastTime > new TimeSpan(0, 20, 0))
                 {
                     bufferedMembers.Clear();
                     updatedMembersLastTime = DateTime.Now;
                 }
-                foreach(var it in bufferedMembers)
+                foreach (var it in bufferedMembers)
                 {
-                    if(id == it.id) { return it; }
+                    if (id == it.id) { return it; }
                 }
             }
-            var httpRequest = new HttpRequestMessage(HttpMethod.Get, "https://api.trello.com/1/members/" + id + "?" + "key=" + Key + "&token=" + Token);
+            var httpRequest = new HttpRequestMessage(HttpMethod.Get, "https://api.trello.com/1/members/" + id + "?" + "key=" + config.key + "&token=" + config.token);
             HttpResponseMessage response = client.SendAsync(httpRequest).Result;
             if (response.IsSuccessStatusCode)
             {
@@ -79,7 +79,7 @@ namespace TrelloScriptServer.API.Trello
                 newMember.userName = details["username"].ToString();
                 newMember.FullName = details["fullName"].ToString();
                 lock (membersLock)
-                { 
+                {
                     bufferedMembers.Add(newMember);
                 }
                 return newMember;
@@ -95,7 +95,7 @@ namespace TrelloScriptServer.API.Trello
         public List<TrelloBoard> getBoards()
         {
             List<TrelloBoard> ret = new List<TrelloBoard>();
-            var httpRequest = new HttpRequestMessage(HttpMethod.Get, "https://api.trello.com/1/members/me/boards?" + "key=" + Key + "&token=" + Token);
+            var httpRequest = new HttpRequestMessage(HttpMethod.Get, "https://api.trello.com/1/members/me/boards?" + "key=" + config.key + "&token=" + config.token);
             HttpResponseMessage response = client.SendAsync(httpRequest).Result;
             if (response.IsSuccessStatusCode)
             {
@@ -111,7 +111,7 @@ namespace TrelloScriptServer.API.Trello
                     if (details[i]["memberships"] != null && details[i]["memberships"].ToString() != "")
                     {
                         newBoard.members = new List<TrelloMember>();
-                        foreach(var it in details[i]["memberships"])
+                        foreach (var it in details[i]["memberships"])
                         {
                             var member = getMember(it["idMember"].ToString());
                             newBoard.members.Add(member);
@@ -134,7 +134,7 @@ namespace TrelloScriptServer.API.Trello
         public List<TrelloList> getLists(TrelloBoard board)
         {
             List<TrelloList> ret = new List<TrelloList>();
-            var httpRequest = new HttpRequestMessage(HttpMethod.Get, "https://api.trello.com/1/boards/" + board.id + "/lists?" + "key=" + Key + "&token=" + Token);
+            var httpRequest = new HttpRequestMessage(HttpMethod.Get, "https://api.trello.com/1/boards/" + board.id + "/lists?" + "key=" + config.key + "&token=" + config.token);
             HttpResponseMessage response = client.SendAsync(httpRequest).Result;
             if (response.IsSuccessStatusCode)
             {
@@ -165,7 +165,7 @@ namespace TrelloScriptServer.API.Trello
         public List<TrelloCard> getCards(TrelloList list)
         {
             List<TrelloCard> ret = new List<TrelloCard>();
-            var httpRequest = new HttpRequestMessage(HttpMethod.Get, "https://api.trello.com/1/lists/" + list.id + "/cards?" + "key=" + Key + "&token=" + Token);
+            var httpRequest = new HttpRequestMessage(HttpMethod.Get, "https://api.trello.com/1/lists/" + list.id + "/cards?" + "key=" + config.key + "&token=" + config.token);
             HttpResponseMessage response = client.SendAsync(httpRequest).Result;
             if (response.IsSuccessStatusCode)
             {
@@ -216,7 +216,7 @@ namespace TrelloScriptServer.API.Trello
         {
             List<TrelloCard> ret = new List<TrelloCard>();
             var httpRequest = new HttpRequestMessage(HttpMethod.Put, "https://api.trello.com/1/cards/" + card.id + "?" + "name=" + card.name + "&desc=" + card.desc
-                + "&key=" + Key + "&token=" + Token);
+                + "&key=" + config.key + "&token=" + config.token);
             HttpResponseMessage response = client.SendAsync(httpRequest).Result;
             if (response.IsSuccessStatusCode)
             {
