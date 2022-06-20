@@ -1,4 +1,4 @@
-﻿namespace TrelloScriptServer.API.Trello
+﻿namespace TrelloScriptServer.API.Trello.Model
 {
     public class TrelloMember
     {

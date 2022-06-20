@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace TrelloScriptServer.API.Trello
+namespace TrelloScriptServer.API.Trello.Model
 {
     class TrelloList
     {

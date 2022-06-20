@@ -28,6 +28,14 @@ while(line != "quit")
         {
             Console.WriteLine(result.Body);
         }
+        if (result.Warnings != null)
+        {
+            Console.ForegroundColor = ConsoleColor.Yellow;
+            foreach (var warning in result.Warnings)
+            {
+                Console.WriteLine("Warning: " + warning);
+            }
+        }
         if (result.Successfull)
         {
             Console.ForegroundColor = ConsoleColor.Green;

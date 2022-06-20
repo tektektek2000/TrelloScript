@@ -5,6 +5,7 @@
         public bool Successfull { get; set; }
         public string? Message { get; set; }
         public string? Body { get; set; }
+        public List<string>? Warnings { get; set; }
 
         public static CommandResult Failure(string Message)
         {

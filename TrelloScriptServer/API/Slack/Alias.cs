@@ -2,7 +2,7 @@
 {
     public class Alias
     {
-        public string TrelloName { get; set; }
-        public string SlackName { get; set; }
+        public string trello { get; set; }
+        public string slack { get; set; }
     }
 }
