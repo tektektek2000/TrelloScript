@@ -1,4 +1,4 @@
-﻿namespace TrelloScriptServer.API.Slack
+﻿namespace TrelloScriptServer.Services.Slack
 {
     public class Alias
     {

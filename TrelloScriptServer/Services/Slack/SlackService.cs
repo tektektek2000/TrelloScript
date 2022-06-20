@@ -63,6 +63,15 @@ namespace TrelloScriptServer.Services.Slack
             _config = config;
         }
 
+        void DeleteAllMessagesInChannel(string channel)
+        {
+            var msgs = slackAPI.getMessages(channel);
+            foreach(var it in msgs)
+            {
+                slackAPI.DeleteMessage(channel, it);
+            }
+        }
+
         string CardToSlackMessage(TrelloCard card, bool printList = false, bool printBoard = false)
         {
             string message = "";
@@ -92,7 +101,7 @@ namespace TrelloScriptServer.Services.Slack
 
         public void UpdateAutoExpiredCards()
         {
-
+            DeleteAllMessagesInChannel(config.autoExpiredCardsChannel);
             Dictionary<TrelloBoard, List<TrelloCard>> autoExpiredCards = new Dictionary<TrelloBoard, List<TrelloCard>>();
             Dictionary<TrelloBoard, List<TrelloCard>> autoSoonToBeExpiredCards = new Dictionary<TrelloBoard, List<TrelloCard>>();
             Dictionary<TrelloMember, List<TrelloCard>> dmCards = new Dictionary<TrelloMember, List<TrelloCard>>();
@@ -109,8 +118,11 @@ namespace TrelloScriptServer.Services.Slack
                     {
                         foreach(TrelloMember trelloMember in card.members)
                         {
-                            if (!dmCards.ContainsKey(trelloMember)) { dmCards.Add(trelloMember, new List<TrelloCard>()); }
-                            dmCards[trelloMember].Add(card);
+                            if (hasSlackAlias(trelloMember.userName))
+                            {
+                                if (!dmCards.ContainsKey(trelloMember)) { dmCards.Add(trelloMember, new List<TrelloCard>()); }
+                                dmCards[trelloMember].Add(card);
+                            }
                         }
                         message += CardToSlackMessage(card, true, false);
                     }
@@ -130,15 +142,19 @@ namespace TrelloScriptServer.Services.Slack
                 }
                 slackAPI.Message(config.autoExpiredCardsChannel,message);
             }
-            foreach(TrelloMember member in dmCards.Keys)
+            if (config.autoExpiredCardsDMEnabled)
             {
-                var cards = dmCards[member];
-                string message = "Hi!\nThere are some expired cards assigned to you:\n\n";
-                foreach (var card in cards)
+                foreach (TrelloMember member in dmCards.Keys)
                 {
-                    message += CardToSlackMessage(card, true, true);
+                    var cards = dmCards[member];
+                    string message = "Hi!\nThere are some expired cards assigned to you:\n\n";
+                    foreach (var card in cards)
+                    {
+                        message += CardToSlackMessage(card, true, true);
+                    }
+                    DeleteAllMessagesInChannel(slackAPI.getDMChannel(getSlackAlias(member.userName)).id);
+                    slackAPI.Message(getSlackAlias(member.userName), message);
                 }
-                slackAPI.Message(getSlackAlias(member.userName), message);
             }
         }
 
